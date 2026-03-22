@@ -1,0 +1,10 @@
+{
+  "name": "icloud-email-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for iCloud Email via IMAP, deployed on Vercel",
+  "private": true,
+  "dependencies": {
+    "imap": "^0.8.19",
+    "mailparser": "^3.7.2"
+  }
+}
