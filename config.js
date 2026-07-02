@@ -6,14 +6,18 @@
 require('dotenv').config();
 
 const useLocalModeRaw = process.env.USE_LOCAL_MODE ?? process.env.USELOCALMODE;
+// Auto-detect Vercel or non-macOS environment to disable local mode
+const isVercel = !!process.env.VERCEL;
+const isMacOS = process.platform === 'darwin';
 
 module.exports = {
   // Mode flags
   USE_TEST_MODE: process.env.USE_TEST_MODE === 'true',
-  USE_LOCAL_MODE: useLocalModeRaw !== 'false', // Default to true (local mode)
+  // Disable local mode if on Vercel or not on macOS, unless explicitly forced to 'true'
+  USE_LOCAL_MODE: useLocalModeRaw === 'true' ? true : (useLocalModeRaw === 'false' || isVercel || !isMacOS ? false : true),
 
   // Check if running on macOS (required for local mode)
-  IS_MACOS: process.platform === 'darwin',
+  IS_MACOS: isMacOS,
 
   // iCloud credentials
   ICLOUD_EMAIL: process.env.ICLOUD_EMAIL,
