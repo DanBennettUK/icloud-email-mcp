@@ -7,7 +7,8 @@ const config = require('../config');
 /**
  * Format date for display (Spanish locale by default)
  */
-function formatDate(date, options = {}) {
+function formatDate(date, options) {
+  if (options === undefined) options = {};
   const d = date instanceof Date ? date : new Date(date);
 
   const defaultOptions = {
@@ -19,7 +20,11 @@ function formatDate(date, options = {}) {
     timeZone: config.DEFAULTS.TIMEZONE
   };
 
-  return d.toLocaleString(config.DEFAULTS.DATE_FORMAT, { ...defaultOptions, ...options });
+  const finalOptions = {};
+  for (let key in defaultOptions) finalOptions[key] = defaultOptions[key];
+  for (let key in options) finalOptions[key] = options[key];
+
+  return d.toLocaleString(config.DEFAULTS.DATE_FORMAT, finalOptions);
 }
 
 /**
@@ -40,12 +45,13 @@ function parseDate(dateStr) {
 /**
  * Get date range for calendar queries
  */
-function getDateRange(daysAhead = 30) {
+function getDateRange(daysAhead) {
+  if (daysAhead === undefined) daysAhead = 30;
   const start = new Date();
   const end = new Date();
   end.setDate(end.getDate() + daysAhead);
 
-  return { start, end };
+  return { start: start, end: end };
 }
 
 /**
@@ -58,15 +64,15 @@ function formatRelative(date) {
 
   if (diff === 0) return 'Hoy';
   if (diff === 1) return 'Ayer';
-  if (diff < 7) return `Hace \${diff} días`;
+  if (diff < 7) return 'Hace ' + diff + ' días';
 
   return formatDate(d, { hour: undefined, minute: undefined });
 }
 
 module.exports = {
-  formatDate,
-  formatICalDate,
-  parseDate,
-  getDateRange,
-  formatRelative
+  formatDate: formatDate,
+  formatICalDate: formatICalDate,
+  parseDate: parseDate,
+  getDateRange: getDateRange,
+  formatRelative: formatRelative
 };
