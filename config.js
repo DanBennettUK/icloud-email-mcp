@@ -10,6 +10,12 @@ const useLocalModeRaw = process.env.USE_LOCAL_MODE ?? process.env.USELOCALMODE;
 const isVercel = !!process.env.VERCEL;
 const isMacOS = process.platform === 'darwin';
 
+// Sanitization function for app passwords (removes dashes and spaces)
+function sanitizePassword(pwd) {
+  if (!pwd) return pwd;
+  return pwd.replace(/[\s-]/g, '').toLowerCase();
+}
+
 module.exports = {
   // Mode flags
   USE_TEST_MODE: process.env.USE_TEST_MODE === 'true',
@@ -21,7 +27,7 @@ module.exports = {
 
   // iCloud credentials (with fallback for legacy/Dan's environment variables)
   ICLOUD_EMAIL: process.env.ICLOUD_EMAIL ?? process.env.IMAP_USER,
-  ICLOUD_APP_PASSWORD: process.env.ICLOUD_APP_PASSWORD ?? process.env.ICLOUDAPPPASSWORD ?? process.env.IMAP_PASSWORD,
+  ICLOUD_APP_PASSWORD: sanitizePassword(process.env.ICLOUD_APP_PASSWORD ?? process.env.ICLOUDAPPPASSWORD ?? process.env.IMAP_PASSWORD),
 
   // IMAP settings for iCloud Mail
   IMAP: {
