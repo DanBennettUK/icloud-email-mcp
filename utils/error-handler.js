@@ -6,13 +6,13 @@
  * Format error for MCP response
  */
 function formatError(error, context = '') {
-  const prefix = context ? `[\${context}] ` : '';
+  const prefix = context ? `[${context}] ` : '';
 
   if (error.message === 'UNAUTHORIZED' || error.message?.includes('authentication')) {
     return {
       content: [{
         type: 'text',
-        text: `\${prefix}Authentication failed. Please verify your iCloud credentials in .env file.\n\nTo set up:\n1. Go to https://appleid.apple.com\n2. Security → App-Specific Passwords → Generate\n3. Copy the password to ICLOUD_APP_PASSWORD in .env`
+        text: `${prefix}Authentication failed. Please verify your iCloud credentials in .env file.\n\nTo set up:\n1. Go to https://appleid.apple.com\n2. Security → App-Specific Passwords → Generate\n3. Copy the password to ICLOUD_APP_PASSWORD in .env`
       }]
     };
   }
@@ -20,9 +20,16 @@ function formatError(error, context = '') {
   return {
     content: [{
       type: 'text',
-      text: `\${prefix}Error: \${error.message || 'Unknown error occurred'}`
+      text: `${prefix}Error: ${error.message || 'Unknown error occurred'}`
     }]
   };
+}
+
+/**
+ * Legacy/Alias for formatError used in some modules
+ */
+function handleError(error, context = '') {
+  return formatError(error, context);
 }
 
 /**
@@ -45,7 +52,7 @@ function withErrorHandler(handler, context) {
     try {
       return await handler(args);
     } catch (error) {
-      console.error(`[\${context}] Error:`, error.message);
+      console.error(`[${context}] Error:`, error.message);
       return formatError(error, context);
     }
   };
@@ -53,6 +60,7 @@ function withErrorHandler(handler, context) {
 
 module.exports = {
   formatError,
+  handleError,
   formatSuccess,
   withErrorHandler
 };
