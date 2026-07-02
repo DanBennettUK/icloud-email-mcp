@@ -19,24 +19,24 @@ async function handleListContacts(args) {
     return formatSuccess('No contacts found.');
   }
 
-  const lines = contacts.map((contact, i) => {
-    let line = \`\${i + 1}. \${contact.displayName}\`;
+  const lines = contacts.map(function(contact, i) {
+    let line = (i + 1) + '. ' + contact.displayName;
 
     if (contact.emails.length > 0) {
-      line += \`\\n   Email: \${contact.emails[0].value}\`;
+      line += '\n   Email: ' + contact.emails[0].value;
     }
     if (contact.phones.length > 0) {
-      line += \`\\n   Phone: \${contact.phones[0].value}\`;
+      line += '\n   Phone: ' + contact.phones[0].value;
     }
     if (contact.organization) {
-      line += \`\\n   Company: \${contact.organization}\`;
+      line += '\n   Company: ' + contact.organization;
     }
-    line += \`\\n   URL: \${contact.url}\`;
+    line += '\n   URL: ' + contact.url;
 
     return line;
   });
 
-  return formatSuccess(\`Contacts (\${contacts.length}):\\n\\n\${lines.join('\\n\\n')}\`);
+  return formatSuccess('Contacts (' + contacts.length + '):\n\n' + lines.join('\n\n'));
 }
 
 /**
@@ -51,27 +51,27 @@ async function handleSearchContacts(args) {
   const contacts = await searchContacts(args.query, count);
 
   if (contacts.length === 0) {
-    return formatSuccess(\`No contacts found matching "\${args.query}".\`);
+    return formatSuccess('No contacts found matching "' + args.query + '".');
   }
 
-  const lines = contacts.map((contact, i) => {
-    let line = \`\${i + 1}. \${contact.displayName}\`;
+  const lines = contacts.map(function(contact, i) {
+    let line = (i + 1) + '. ' + contact.displayName;
 
     if (contact.emails.length > 0) {
-      line += \`\\n   Email: \${contact.emails[0].value}\`;
+      line += '\n   Email: ' + contact.emails[0].value;
     }
     if (contact.phones.length > 0) {
-      line += \`\\n   Phone: \${contact.phones[0].value}\`;
+      line += '\n   Phone: ' + contact.phones[0].value;
     }
     if (contact.organization) {
-      line += \`\\n   Company: \${contact.organization}\`;
+      line += '\n   Company: ' + contact.organization;
     }
-    line += \`\\n   URL: \${contact.url}\`;
+    line += '\n   URL: ' + contact.url;
 
     return line;
   });
 
-  return formatSuccess(\`Search results for "\${args.query}" (\${contacts.length}):\\n\\n\${lines.join('\\n\\n')}\`);
+  return formatSuccess('Search results for "' + args.query + '" (' + contacts.length + '):\n\n' + lines.join('\n\n'));
 }
 
 /**
@@ -85,33 +85,25 @@ async function handleReadContact(args) {
   const contact = await getContact(args.contactUrl);
 
   const emailList = contact.emails.length > 0
-    ? contact.emails.map(e => \`  - \${e.value} (\${e.type})\`).join('\\n')
+    ? contact.emails.map(function(e) { return '  - ' + e.value + ' (' + e.type + ')'; }).join('\n')
     : '  (none)';
 
   const phoneList = contact.phones.length > 0
-    ? contact.phones.map(p => \`  - \${p.value} (\${p.type})\`).join('\\n')
+    ? contact.phones.map(function(p) { return '  - ' + p.value + ' (' + p.type + ')'; }).join('\n')
     : '  (none)';
 
   return formatSuccess(
-    \`Contact Details:
-
-Name: \${contact.displayName}
-First Name: \${contact.firstName || '(not set)'}
-Last Name: \${contact.lastName || '(not set)'}
-
-Emails:
-\${emailList}
-
-Phones:
-\${phoneList}
-
-Organization: \${contact.organization || '(not set)'}
-Title: \${contact.title || '(not set)'}
-
-Notes: \${contact.notes || '(none)'}
-
-URL: \${contact.url}
-UID: \${contact.uid}\`
+    'Contact Details:\n\n' +
+    'Name: ' + contact.displayName + '\n' +
+    'First Name: ' + (contact.firstName || '(not set)') + '\n' +
+    'Last Name: ' + (contact.lastName || '(not set)') + '\n\n' +
+    'Emails:\n' + emailList + '\n\n' +
+    'Phones:\n' + phoneList + '\n\n' +
+    'Organization: ' + (contact.organization || '(not set)') + '\n' +
+    'Title: ' + (contact.title || '(not set)') + '\n\n' +
+    'Notes: ' + (contact.notes || '(none)') + '\n\n' +
+    'URL: ' + contact.url + '\n' +
+    'UID: ' + contact.uid
   );
 }
 
@@ -134,10 +126,14 @@ async function handleCreateContact(args) {
     notes: args.notes
   });
 
-  const name = args.displayName || \`\${args.firstName || ''} \${args.lastName || ''}\`.trim();
+  const name = args.displayName || ( (args.firstName || '') + ' ' + (args.lastName || '') ).trim();
 
   return formatSuccess(
-    \`Contact created successfully!\\n\\nName: \${name}\${args.email ? \`\\nEmail: \${args.email}\` : ''}\${args.phone ? \`\\nPhone: \${args.phone}\` : ''}\${args.organization ? \`\\nOrganization: \${args.organization}\` : ''}\\nUID: \${result.uid}\`
+    'Contact created successfully!\n\nName: ' + name + 
+    (args.email ? '\nEmail: ' + args.email : '') + 
+    (args.phone ? '\nPhone: ' + args.phone : '') + 
+    (args.organization ? '\nOrganization: ' + args.organization : '') + 
+    '\nUID: ' + result.uid
   );
 }
 
@@ -266,10 +262,10 @@ const contactsTools = [
 ];
 
 module.exports = {
-  contactsTools,
-  handleListContacts,
-  handleSearchContacts,
-  handleReadContact,
-  handleCreateContact,
-  handleDeleteContact
+  contactsTools: contactsTools,
+  handleListContacts: handleListContacts,
+  handleSearchContacts: handleSearchContacts,
+  handleReadContact: handleReadContact,
+  handleCreateContact: handleCreateContact,
+  handleDeleteContact: handleDeleteContact
 };
