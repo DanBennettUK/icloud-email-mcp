@@ -18,23 +18,23 @@ async function handleListEvents(args) {
   const events = await listEvents(count, daysAhead);
 
   if (events.length === 0) {
-    return formatSuccess(\`No upcoming events in the next \${daysAhead} days.\`);
+    return formatSuccess('No upcoming events in the next ' + daysAhead + ' days.');
   }
 
   const lines = events.map((event, i) => {
     const dateStr = event.isAllDay
-      ? \`All day: \${formatDate(event.start, { hour: undefined, minute: undefined })}\`
-      : \`\${formatDate(event.start)} - \${formatDate(event.end, { year: undefined, month: undefined, day: undefined })}\`;
+      ? 'All day: ' + formatDate(event.start, { hour: undefined, minute: undefined })
+      : formatDate(event.start) + ' - ' + formatDate(event.end, { year: undefined, month: undefined, day: undefined });
 
-    let line = \`\${i + 1}. \${event.summary}\\n   \${dateStr}\`;
-    if (event.location) line += \`\\n   Location: \${event.location}\`;
-    if (event.calendarName) line += \`\\n   Calendar: \${event.calendarName}\`;
-    line += \`\\n   URL: \${event.url}\`;
+    let line = (i + 1) + '. ' + event.summary + '\n   ' + dateStr;
+    if (event.location) line += '\n   Location: ' + event.location;
+    if (event.calendarName) line += '\n   Calendar: ' + event.calendarName;
+    line += '\n   URL: ' + event.url;
 
     return line;
   });
 
-  return formatSuccess(\`Upcoming events (\${events.length}):\\n\\n\${lines.join('\\n\\n')}\`);
+  return formatSuccess('Upcoming events (' + events.length + '):\n\n' + lines.join('\n\n'));
 }
 
 /**
@@ -61,7 +61,7 @@ async function handleCreateEvent(args) {
   });
 
   return formatSuccess(
-    \`Event created successfully!\\n\\nTitle: \${args.summary}\\nStart: \${formatDate(new Date(args.start))}\\nEnd: \${formatDate(new Date(args.end))}\${args.location ? \`\\nLocation: \${args.location}\` : ''}\\nCalendar: \${result.calendar}\\nUID: \${result.uid}\`
+    'Event created successfully!\n\nTitle: ' + args.summary + '\nStart: ' + formatDate(new Date(args.start)) + '\nEnd: ' + formatDate(new Date(args.end)) + (args.location ? '\nLocation: ' + args.location : '') + '\nCalendar: ' + result.calendar + '\nUID: ' + result.uid
   );
 }
 
@@ -75,7 +75,7 @@ async function handleDeleteEvent(args) {
 
   await deleteEvent(args.eventUrl);
 
-  return formatSuccess(\`Event deleted successfully.\`);
+  return formatSuccess('Event deleted successfully.');
 }
 
 /**
@@ -89,10 +89,10 @@ async function handleListCalendars() {
   }
 
   const lines = calendars.map((cal, i) =>
-    \`\${i + 1}. \${cal.displayName}\\n   URL: \${cal.url}\`
+    (i + 1) + '. ' + cal.displayName + '\n   URL: ' + cal.url
   );
 
-  return formatSuccess(\`Calendars (\${calendars.length}):\\n\\n\${lines.join('\\n\\n')}\`);
+  return formatSuccess('Calendars (' + calendars.length + '):\n\n' + lines.join('\n\n'));
 }
 
 // Tool definitions
