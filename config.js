@@ -19,9 +19,9 @@ module.exports = {
   // Check if running on macOS (required for local mode)
   IS_MACOS: isMacOS,
 
-  // iCloud credentials
-  ICLOUD_EMAIL: process.env.ICLOUD_EMAIL,
-  ICLOUD_APP_PASSWORD: process.env.ICLOUD_APP_PASSWORD ?? process.env.ICLOUDAPPPASSWORD,
+  // iCloud credentials (with fallback for legacy/Dan's environment variables)
+  ICLOUD_EMAIL: process.env.ICLOUD_EMAIL ?? process.env.IMAP_USER,
+  ICLOUD_APP_PASSWORD: process.env.ICLOUD_APP_PASSWORD ?? process.env.ICLOUDAPPPASSWORD ?? process.env.IMAP_PASSWORD,
 
   // IMAP settings for iCloud Mail
   IMAP: {
