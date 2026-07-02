@@ -1,37 +1,45 @@
-# icloud-email-mcp
+# iCloud MCP Server v2.0.0
 
-Node.js MCP server for iCloud Email via IMAP — deployed as a Vercel serverless function.
+A modular Model Context Protocol (MCP) server that enables Claude to interact with your iCloud account. This version is deployed as a Vercel serverless function and provides a unified interface for Email, Calendar, and Contacts.
 
-## Authentication
+## Features
 
-All requests require auth via one of:
-- `Authorization: Bearer <POKE_API_KEY>`
-- `X-Api-Key: <POKE_API_KEY>`
-- `?key=<POKE_API_KEY>` query parameter
+- **Email**: Read, search, mark as read, and **send emails** (via IMAP/SMTP).
+- **Calendar**: List upcoming events, create new events, and delete events (via CalDAV).
+- **Contacts**: List, search, read, and create contacts (via CardDAV).
+- **Modular Architecture**: Clean separation of concerns with dedicated clients for each service.
 
-## Environment variables
+## Configuration
 
-| Variable | Description |
-|---|---|
-| `IMAP_USER` | iCloud email address |
-| `IMAP_PASSWORD` | iCloud app-specific password |
-| `POKE_API_KEY` | Secret key for request authentication |
+The server requires the following environment variables:
 
-## Tools (7 total)
+- `ICLOUD_EMAIL`: Your full iCloud email address (e.g., `user@icloud.com`).
+- `ICLOUD_APP_PASSWORD`: An app-specific password generated at [appleid.apple.com](https://appleid.apple.com).
+- `POKE_API_KEY`: (Optional) Security key to authorize MCP requests.
 
-- `list_mailboxes` — list all mailboxes/folders
-- `list_emails` — list recent emails from a mailbox
-- `get_email` — get full content of an email by UID
-- `search_emails` — search emails by subject, sender, or date
-- `get_mailbox_status` — get total and unread counts for a mailbox
-- `archive_email` — archive an email by UID
-- `move_email` — move an email to a different mailbox
+## Deployment
 
-## Dependencies
+This server is optimized for deployment on **Vercel** as a serverless function. The entry point is `api/mcp.js`.
 
-```json
-{
-  "imap": "^0.8.19",
-  "mailparser": "^3.7.2"
-}
-```
+## Tool Summary
+
+### Email
+- `list-emails`: Lists recent emails from a folder.
+- `read-email`: Gets full content of an email.
+- `send-email`: Sends a new email via SMTP.
+- `search-emails`: Search by query, sender, or subject.
+- `mark-as-read`: Toggle seen status.
+- `list-folders`: List all mailbox folders.
+
+### Calendar
+- `list-events`: Show upcoming events.
+- `create-event`: Add a new event to a calendar.
+- `delete-event`: Remove an event.
+- `list-calendars`: List all available calendars.
+
+### Contacts
+- `list-contacts`: List your address book.
+- `search-contacts`: Find contacts by name or info.
+- `read-contact`: Get detailed contact cards.
+- `create-contact`: Add a new contact.
+- `delete-contact`: Remove a contact.
