@@ -33,7 +33,7 @@ async function getClient() {
     cachedClient = client;
     return client;
   } catch (error) {
-    if (error.message?.includes('401') || error.message?.includes('auth')) {
+    if (error.message && (error.message.indexOf('401') !== -1 || error.message.indexOf('auth') !== -1)) {
       throw new Error('UNAUTHORIZED');
     }
     throw error;
@@ -53,7 +53,7 @@ function clearClient() {
 function parseVCard(vcardData, url) {
   try {
     const contact = {
-      url,
+      url: url,
       uid: '',
       displayName: '',
       firstName: '',
@@ -65,9 +65,10 @@ function parseVCard(vcardData, url) {
       notes: ''
     };
 
-    const lines = vcardData.split(/\\r?\\n/);
+    const lines = vcardData.split(/\r?\n/);
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const colonIndex = line.indexOf(':');
       if (colonIndex === -1) continue;
 
@@ -112,7 +113,7 @@ function parseVCard(vcardData, url) {
 
     // Use first/last name if no display name
     if (!contact.displayName && (contact.firstName || contact.lastName)) {
-      contact.displayName = \`\${contact.firstName} \${contact.lastName}\`.trim();
+      contact.displayName = ( (contact.firstName || '') + ' ' + (contact.lastName || '') ).trim();
     }
 
     return contact;
@@ -126,8 +127,9 @@ function parseVCard(vcardData, url) {
  * Extract TYPE parameter from vCard property
  */
 function extractType(keyParts) {
-  for (const part of keyParts) {
-    if (part.startsWith('TYPE=')) {
+  for (let i = 0; i < keyParts.length; i++) {
+    const part = keyParts[i];
+    if (part.indexOf('TYPE=') === 0) {
       return part.substring(5).toLowerCase();
     }
   }
@@ -140,10 +142,10 @@ function extractType(keyParts) {
 function decodeVCardValue(value) {
   if (!value) return '';
   return value
-    .replace(/\\\\n/gi, '\\n')
-    .replace(/\\\\,/g, ',')
-    .replace(/\\\\;/g, ';')
-    .replace(/\\\\\\\\/g, '\\\\');
+    .replace(/\\n/gi, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
 }
 
 /**
@@ -152,10 +154,10 @@ function decodeVCardValue(value) {
 function encodeVCardValue(value) {
   if (!value) return '';
   return value
-    .replace(/\\\\/g, '\\\\\\\\')
-    .replace(/;/g, '\\\\;')
-    .replace(/,/g, '\\\\,')
-    .replace(/\\n/g, '\\\\n');
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
 }
 
 /**
@@ -164,38 +166,43 @@ function encodeVCardValue(value) {
 async function getAddressBooks() {
   const client = await getClient();
   const addressBooks = await client.fetchAddressBooks();
-  return addressBooks.map(ab => ({
-    url: ab.url,
-    displayName: ab.displayName || 'Contacts'
-  }));
+  return addressBooks.map(function(ab) {
+    return {
+      url: ab.url,
+      displayName: ab.displayName || 'Contacts'
+    };
+  });
 }
 
 /**
  * List contacts
  */
-async function listContacts(count = 25) {
+async function listContacts(count) {
+  if (count === undefined) count = 25;
   const client = await getClient();
   const addressBooks = await client.fetchAddressBooks();
 
   const allContacts = [];
 
-  for (const addressBook of addressBooks) {
+  for (let i = 0; i < addressBooks.length; i++) {
+    const addressBook = addressBooks[i];
     try {
-      const vcards = await client.fetchVCards({ addressBook });
+      const vcards = await client.fetchVCards({ addressBook: addressBook });
 
-      for (const vcard of vcards) {
+      for (let j = 0; j < vcards.length; j++) {
+        const vcard = vcards[j];
         const contact = parseVCard(vcard.data, vcard.url);
         if (contact && contact.displayName) {
           allContacts.push(contact);
         }
       }
     } catch (error) {
-      console.error(\`Error fetching from address book:\`, error.message);
+      console.error('Error fetching from address book:', error.message);
     }
   }
 
   // Sort by display name
-  allContacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  allContacts.sort(function(a, b) { return a.displayName.localeCompare(b.displayName); });
 
   return allContacts.slice(0, count);
 }
@@ -203,21 +210,23 @@ async function listContacts(count = 25) {
 /**
  * Search contacts
  */
-async function searchContacts(query, count = 25) {
+async function searchContacts(query, count) {
+  if (count === undefined) count = 25;
   const allContacts = await listContacts(count * 2);
   const lowerQuery = query.toLowerCase();
 
-  const matches = allContacts.filter(contact => {
+  const matches = allContacts.filter(function(contact) {
+    const emailVals = contact.emails.map(function(e) { return e.value; });
+    const phoneVals = contact.phones.map(function(p) { return p.value; });
+    
     const searchText = [
       contact.displayName,
       contact.firstName,
       contact.lastName,
-      contact.organization,
-      ...contact.emails.map(e => e.value),
-      ...contact.phones.map(p => p.value)
-    ].join(' ').toLowerCase();
+      contact.organization
+    ].concat(emailVals).concat(phoneVals).join(' ').toLowerCase();
 
-    return searchText.includes(lowerQuery);
+    return searchText.indexOf(lowerQuery) !== -1;
   });
 
   return matches.slice(0, count);
@@ -244,7 +253,16 @@ async function getContact(contactUrl) {
 /**
  * Create a new contact
  */
-async function createContact({ displayName, firstName, lastName, email, phone, organization, title, notes }) {
+async function createContact(params) {
+  const displayName = params.displayName;
+  const firstName = params.firstName;
+  const lastName = params.lastName;
+  const email = params.email;
+  const phone = params.phone;
+  const organization = params.organization;
+  const title = params.title;
+  const notes = params.notes;
+
   const client = await getClient();
   const addressBooks = await client.fetchAddressBooks();
 
@@ -253,42 +271,44 @@ async function createContact({ displayName, firstName, lastName, email, phone, o
   }
 
   const addressBook = addressBooks[0];
-  const uid = \`\${Date.now()}-\${Math.random().toString(36).substr(2, 9)}\`;
+  const uid = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
-  let vcard = \`BEGIN:VCARD
-VERSION:3.0
-UID:\${uid}
-FN:\${encodeVCardValue(displayName || \`\${firstName || ''} \${lastName || ''}\`.trim())}
-N:\${encodeVCardValue(lastName || '')};\${encodeVCardValue(firstName || '')};;;\`;
+  const display = displayName || ( (firstName || '') + ' ' + (lastName || '') ).trim();
+
+  let vcard = 'BEGIN:VCARD\n' +
+    'VERSION:3.0\n' +
+    'UID:' + uid + '\n' +
+    'FN:' + encodeVCardValue(display) + '\n' +
+    'N:' + encodeVCardValue(lastName || '') + ';' + encodeVCardValue(firstName || '') + ';;;';
 
   if (email) {
-    vcard += \`\\nEMAIL;TYPE=INTERNET:\${encodeVCardValue(email)}\`;
+    vcard += '\nEMAIL;TYPE=INTERNET:' + encodeVCardValue(email);
   }
   if (phone) {
-    vcard += \`\\nTEL;TYPE=CELL:\${encodeVCardValue(phone)}\`;
+    vcard += '\nTEL;TYPE=CELL:' + encodeVCardValue(phone);
   }
   if (organization) {
-    vcard += \`\\nORG:\${encodeVCardValue(organization)}\`;
+    vcard += '\nORG:' + encodeVCardValue(organization);
   }
   if (title) {
-    vcard += \`\\nTITLE:\${encodeVCardValue(title)}\`;
+    vcard += '\nTITLE:' + encodeVCardValue(title);
   }
   if (notes) {
-    vcard += \`\\nNOTE:\${encodeVCardValue(notes)}\`;
+    vcard += '\nNOTE:' + encodeVCardValue(notes);
   }
 
-  vcard += \`\\nEND:VCARD\`;
+  vcard += '\nEND:VCARD';
 
   const result = await client.createVCard({
-    addressBook,
-    filename: \`\${uid}.vcf\`,
+    addressBook: addressBook,
+    filename: uid + '.vcf',
     vCardString: vcard
   });
 
   return {
     success: true,
-    uid,
-    url: result?.url
+    uid: uid,
+    url: result ? result.url : null
   };
 }
 
@@ -309,13 +329,13 @@ async function deleteContact(contactUrl) {
 }
 
 module.exports = {
-  getClient,
-  clearClient,
-  getAddressBooks,
-  listContacts,
-  searchContacts,
-  getContact,
-  createContact,
-  deleteContact,
-  parseVCard
+  getClient: getClient,
+  clearClient: clearClient,
+  getAddressBooks: getAddressBooks,
+  listContacts: listContacts,
+  searchContacts: searchContacts,
+  getContact: getContact,
+  createContact: createContact,
+  deleteContact: deleteContact,
+  parseVCard: parseVCard
 };
