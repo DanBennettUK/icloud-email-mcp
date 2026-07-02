@@ -19,16 +19,16 @@ async function handleListEmails(args) {
   const emails = await listEmails(folder, count);
 
   if (emails.length === 0) {
-    return formatSuccess(`No emails found in \${folder}.`);
+    return formatSuccess(`No emails found in ${folder}.`);
   }
 
   const lines = emails.map((email, i) => {
-    const unread = !email.flags.includes('\\\\Seen') ? '[UNREAD] ' : '';
+    const unread = !email.flags.includes('\\Seen') ? '[UNREAD] ' : '';
     const date = formatRelative(new Date(email.date));
-    return `\${i + 1}. \${unread}\${email.subject}\n   From: \${email.from}\n   Date: \${date}\n   UID: \${email.uid}`;
+    return `${i + 1}. ${unread}${email.subject}\n   From: ${email.from}\n   Date: ${date}\n   UID: ${email.uid}`;
   });
 
-  return formatSuccess(`Emails in \${folder} (\${emails.length}):\n\n\${lines.join('\n\n')}`);
+  return formatSuccess(`Emails in ${folder} (${emails.length}):\n\n${lines.join('\n\n')}`);
 }
 
 /**
@@ -48,19 +48,19 @@ async function handleReadEmail(args) {
   }
 
   const attachmentInfo = email.attachments.length > 0
-    ? `\n\nAttachments (\${email.attachments.length}):\n\${email.attachments.map(a => \`- \${a.filename} (\${a.contentType}, \${Math.round(a.size / 1024)}KB)\`).join('\n')}`
+    ? `\n\nAttachments (${email.attachments.length}):\n${email.attachments.map(a => `- ${a.filename} (${a.contentType}, ${Math.round(a.size / 1024)}KB)`).join('\n')}`
     : '';
 
   return formatSuccess(
-    `Subject: \${email.subject}
-From: \${email.from}
-To: \${email.to}\${email.cc ? \`\\nCC: \${email.cc}\` : ''}
-Date: \${formatDate(email.date)}
-UID: \${email.uid}
+    `Subject: ${email.subject}
+From: ${email.from}
+To: ${email.to}${email.cc ? `\nCC: ${email.cc}` : ''}
+Date: ${formatDate(email.date)}
+UID: ${email.uid}
 
 ---
 
-\${body}\${attachmentInfo}`
+${body}${attachmentInfo}`
   );
 }
 
@@ -79,6 +79,7 @@ async function handleSendEmail(args) {
   }
 
   const result = await sendEmail({
+    from: args.from,
     to: args.to,
     cc: args.cc,
     bcc: args.bcc,
@@ -89,7 +90,7 @@ async function handleSendEmail(args) {
 
   if (result.success) {
     return formatSuccess(
-      `Email sent successfully!\n\nTo: \${args.to}\${args.cc ? \`\\nCC: \${args.cc}\` : ''}\nSubject: \${args.subject}\nMessage ID: \${result.messageId}`
+      `Email sent successfully!\n\nFrom: ${args.from || 'default'}\nTo: ${args.to}${args.cc ? `\nCC: ${args.cc}` : ''}\nSubject: ${args.subject}\nMessage ID: ${result.messageId}`
     );
   } else {
     return formatError(new Error('Failed to send email'));
@@ -112,16 +113,16 @@ async function handleSearchEmails(args) {
   const emails = await searchEmails(criteria, folder, count);
 
   if (emails.length === 0) {
-    return formatSuccess(`No emails found matching your search criteria in \${folder}.`);
+    return formatSuccess(`No emails found matching your search criteria in ${folder}.`);
   }
 
   const lines = emails.map((email, i) => {
-    const unread = !email.flags.includes('\\\\Seen') ? '[UNREAD] ' : '';
+    const unread = !email.flags.includes('\\Seen') ? '[UNREAD] ' : '';
     const date = formatRelative(new Date(email.date));
-    return `\${i + 1}. \${unread}\${email.subject}\n   From: \${email.from}\n   Date: \${date}\n   UID: \${email.uid}`;
+    return `${i + 1}. ${unread}${email.subject}\n   From: ${email.from}\n   Date: ${date}\n   UID: ${email.uid}`;
   });
 
-  return formatSuccess(`Search results in \${folder} (\${emails.length}):\n\n\${lines.join('\n\n')}`);
+  return formatSuccess(`Search results in ${folder} (${emails.length}):\n\n${lines.join('\n\n')}`);
 }
 
 /**
@@ -137,7 +138,7 @@ async function handleMarkAsRead(args) {
 
   await markAsRead(args.uid, folder, isRead);
 
-  return formatSuccess(`Email \${args.uid} marked as \${isRead ? 'read' : 'unread'}.`);
+  return formatSuccess(`Email ${args.uid} marked as ${isRead ? 'read' : 'unread'}.`);
 }
 
 /**
@@ -146,9 +147,9 @@ async function handleMarkAsRead(args) {
 async function handleListFolders() {
   const folders = await listFolders();
 
-  const lines = folders.map(f => `- \${f.name}`);
+  const lines = folders.map(f => `- ${f.name}`);
 
-  return formatSuccess(`Email folders:\n\n\${lines.join('\n')}`);
+  return formatSuccess(`Email folders:\n\n${lines.join('\n')}`);
 }
 
 // Tool definitions
@@ -197,6 +198,10 @@ const emailTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        from: {
+          type: 'string',
+          description: 'Optional "From" header alias (e.g. your custom domain email)'
+        },
         to: {
           type: 'string',
           description: 'Recipient email address(es), comma-separated'

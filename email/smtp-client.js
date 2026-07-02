@@ -26,12 +26,12 @@ function createTransporter() {
 /**
  * Send an email
  */
-async function sendEmail({ to, cc, bcc, subject, body, isHtml = false }) {
+async function sendEmail({ from, to, cc, bcc, subject, body, isHtml = false }) {
   const creds = getCredentials();
   const transporter = createTransporter();
 
   const mailOptions = {
-    from: creds.email,
+    from: from || creds.email,
     to,
     subject,
     [isHtml ? 'html' : 'text']: body
