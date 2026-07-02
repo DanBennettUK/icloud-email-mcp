@@ -34,7 +34,7 @@ async function getClient() {
     cachedClient = client;
     return client;
   } catch (error) {
-    if (error.message?.includes('401') || error.message?.includes('auth')) {
+    if (error.message && (error.message.indexOf('401') !== -1 || error.message.indexOf('auth') !== -1)) {
       throw new Error('UNAUTHORIZED');
     }
     throw error;
@@ -54,12 +54,14 @@ function clearClient() {
 async function getCalendars() {
   const client = await getClient();
   const calendars = await client.fetchCalendars();
-  return calendars.map(cal => ({
-    url: cal.url,
-    displayName: cal.displayName || 'Unnamed Calendar',
-    ctag: cal.ctag,
-    syncToken: cal.syncToken
-  }));
+  return calendars.map(function(cal) {
+    return {
+      url: cal.url,
+      displayName: cal.displayName || 'Unnamed Calendar',
+      ctag: cal.ctag,
+      syncToken: cal.syncToken
+    };
+  });
 }
 
 /**
@@ -76,19 +78,19 @@ function parseEvent(icalData, url) {
     const event = new ICAL.Event(vevent);
 
     return {
-      url,
+      url: url,
       uid: event.uid,
       summary: event.summary || '(No title)',
       description: event.description || '',
       location: event.location || '',
-      start: event.startDate?.toJSDate(),
-      end: event.endDate?.toJSDate(),
-      isAllDay: event.startDate?.isDate || false,
+      start: event.startDate ? event.startDate.toJSDate() : null,
+      end: event.endDate ? event.endDate.toJSDate() : null,
+      isAllDay: event.startDate ? event.startDate.isDate : false,
       organizer: vevent.getFirstPropertyValue('organizer'),
-      attendees: vevent.getAllProperties('attendee').map(a => a.getFirstValue()),
+      attendees: vevent.getAllProperties('attendee').map(function(a) { return a.getFirstValue(); }),
       status: event.status,
-      created: vevent.getFirstPropertyValue('created')?.toJSDate(),
-      lastModified: vevent.getFirstPropertyValue('last-modified')?.toJSDate()
+      created: vevent.getFirstPropertyValue('created') ? vevent.getFirstPropertyValue('created').toJSDate() : null,
+      lastModified: vevent.getFirstPropertyValue('last-modified') ? vevent.getFirstPropertyValue('last-modified').toJSDate() : null
     };
   } catch (error) {
     console.error('Error parsing event:', error.message);
@@ -99,7 +101,10 @@ function parseEvent(icalData, url) {
 /**
  * List events from all calendars
  */
-async function listEvents(count = 25, daysAhead = 30) {
+async function listEvents(count, daysAhead) {
+  if (count === undefined) count = 25;
+  if (daysAhead === undefined) daysAhead = 30;
+  
   const client = await getClient();
   const calendars = await client.fetchCalendars();
 
@@ -109,17 +114,19 @@ async function listEvents(count = 25, daysAhead = 30) {
 
   const allEvents = [];
 
-  for (const calendar of calendars) {
+  for (let i = 0; i < calendars.length; i++) {
+    const calendar = calendars[i];
     try {
       const calendarObjects = await client.fetchCalendarObjects({
-        calendar,
+        calendar: calendar,
         timeRange: {
           start: now.toISOString(),
           end: endDate.toISOString()
         }
       });
 
-      for (const obj of calendarObjects) {
+      for (let j = 0; j < calendarObjects.length; j++) {
+        const obj = calendarObjects[j];
         const event = parseEvent(obj.data, obj.url);
         if (event) {
           event.calendarName = calendar.displayName || 'Calendar';
@@ -127,12 +134,12 @@ async function listEvents(count = 25, daysAhead = 30) {
         }
       }
     } catch (error) {
-      console.error(\`Error fetching from calendar \${calendar.displayName}:\`, error.message);
+      console.error('Error fetching from calendar ' + calendar.displayName + ':', error.message);
     }
   }
 
   // Sort by start date
-  allEvents.sort((a, b) => (a.start || 0) - (b.start || 0));
+  allEvents.sort(function(a, b) { return (a.start || 0) - (b.start || 0); });
 
   return allEvents.slice(0, count);
 }
@@ -140,18 +147,29 @@ async function listEvents(count = 25, daysAhead = 30) {
 /**
  * Create a new event
  */
-async function createEvent({ summary, start, end, description, location, calendarUrl }) {
+async function createEvent(params) {
+  const summary = params.summary;
+  const start = params.start;
+  const end = params.end;
+  const description = params.description;
+  const location = params.location;
+  const calendarUrl = params.calendarUrl;
+
   const client = await getClient();
 
   // Get calendars if URL not provided
   let targetCalendar;
+  const calendars = await client.fetchCalendars();
   if (calendarUrl) {
-    const calendars = await client.fetchCalendars();
-    targetCalendar = calendars.find(c => c.url === calendarUrl);
+    for (let i = 0; i < calendars.length; i++) {
+      if (calendars[i].url === calendarUrl) {
+        targetCalendar = calendars[i];
+        break;
+      }
+    }
   }
 
   if (!targetCalendar) {
-    const calendars = await client.fetchCalendars();
     targetCalendar = calendars[0]; // Use first calendar
   }
 
@@ -160,33 +178,36 @@ async function createEvent({ summary, start, end, description, location, calenda
   }
 
   // Create iCalendar data
-  const uid = \`\${Date.now()}-\${Math.random().toString(36).substr(2, 9)}@icloud-mcp\`;
+  const uid = Date.now() + '-' + Math.random().toString(36).substr(2, 9) + '@icloud-mcp';
 
   const startDate = new Date(start);
   const endDate = new Date(end);
 
-  const icalData = \`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//iCloud MCP//EN
-BEGIN:VEVENT
-UID:\${uid}
-DTSTAMP:\${formatICalDate(new Date())}
-DTSTART:\${formatICalDate(startDate)}
-DTEND:\${formatICalDate(endDate)}
-SUMMARY:\${escapeICalText(summary)}\${description ? \`\\nDESCRIPTION:\${escapeICalText(description)}\` : ''}\${location ? \`\\nLOCATION:\${escapeICalText(location)}\` : ''}
-END:VEVENT
-END:VCALENDAR\`;
+  let icalData = 'BEGIN:VCALENDAR\n' +
+    'VERSION:2.0\n' +
+    'PRODID:-//iCloud MCP//EN\n' +
+    'BEGIN:VEVENT\n' +
+    'UID:' + uid + '\n' +
+    'DTSTAMP:' + formatICalDate(new Date()) + '\n' +
+    'DTSTART:' + formatICalDate(startDate) + '\n' +
+    'DTEND:' + formatICalDate(endDate) + '\n' +
+    'SUMMARY:' + escapeICalText(summary);
+    
+  if (description) icalData += '\nDESCRIPTION:' + escapeICalText(description);
+  if (location) icalData += '\nLOCATION:' + escapeICalText(location);
+  
+  icalData += '\nEND:VEVENT\nEND:VCALENDAR';
 
   const result = await client.createCalendarObject({
     calendar: targetCalendar,
-    filename: \`\${uid}.ics\`,
+    filename: uid + '.ics',
     iCalString: icalData
   });
 
   return {
     success: true,
-    uid,
-    url: result?.url,
+    uid: uid,
+    url: result ? result.url : null,
     calendar: targetCalendar.displayName
   };
 }
@@ -211,7 +232,7 @@ async function deleteEvent(eventUrl) {
  * Format date for iCalendar
  */
 function formatICalDate(date) {
-  return date.toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '');
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
 /**
@@ -220,18 +241,18 @@ function formatICalDate(date) {
 function escapeICalText(text) {
   if (!text) return '';
   return text
-    .replace(/\\\\/g, '\\\\\\\\')
-    .replace(/;/g, '\\\\;')
-    .replace(/,/g, '\\\\,')
-    .replace(/\\n/g, '\\\\n');
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
 }
 
 module.exports = {
-  getClient,
-  clearClient,
-  getCalendars,
-  listEvents,
-  createEvent,
-  deleteEvent,
-  parseEvent
+  getClient: getClient,
+  clearClient: clearClient,
+  getCalendars: getCalendars,
+  listEvents: listEvents,
+  createEvent: createEvent,
+  deleteEvent: deleteEvent,
+  parseEvent: parseEvent
 };
